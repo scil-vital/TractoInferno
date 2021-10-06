@@ -22,7 +22,7 @@ if(params.help) {
     return
 }
 
-log.info "SCIL TractoEval pipeline"
+log.info "SCIL TractoInferno evaluation pipeline"
 log.info "=========================="
 log.info ""
 log.info "Start time: $workflow.start"
@@ -67,14 +67,14 @@ tractogram_for_recognition = Channel
 
 Channel
     .fromPath("$ref/**/*fa.nii.gz",
-                    maxDepth:1)
-    .map{[it.parent.name, it]}
+                    maxDepth:2)
+    .map{[it.parent.parent.name, it]}
     .into{anat_for_registration;anat_for_reference_centroids;anat_for_reference_bundles}
 
 ref_bundles = Channel
     .fromFilePairs("$ref/**/{*.trk,}",
                     size:-1,
-                    maxDepth:1) {it.parent.name}
+                    maxDepth:2) {it.parent.parent.name}
 
 if (!(params.atlas_anat) || !(params.atlas_config) || !(params.atlas_directory)) {
     error "You must specify all 3 atlas related input. --atlas_anat, " +
@@ -115,15 +115,10 @@ process Register_Anat {
     file "${sid}__outputWarped.nii.gz"
     file "${sid}__native_anat.nii.gz"
     script:
-//     """
-//     export ANTS_RANDOM_SEED=1234
-//     antsRegistrationSyNQuick.sh -d 3 -f ${native_anat} -m ${atlas} -n ${params.register_processes} -o ${sid}__output -t a
-//     cp ${native_anat} ${sid}__native_anat.nii.gz
-//     """
     """
-    touch ${sid}__output0GenericAffine.mat
-    touch "${sid}__outputWarped.nii.gz"
-    touch "${sid}__native_anat.nii.gz"
+    export ANTS_RANDOM_SEED=1234
+    antsRegistrationSyNQuick.sh -d 3 -f ${native_anat} -m ${atlas} -n ${params.register_processes} -o ${sid}__output -t a
+    cp ${native_anat} ${sid}__native_anat.nii.gz
     """
 }
 
@@ -138,12 +133,9 @@ process Transform_Centroids {
     output:
     file "${sid}__${centroid.baseName}.trk"
     script:
-//     """
-//     scil_apply_transform_to_tractogram.py ${centroid} ${anat} ${transfo} ${sid}__${centroid.baseName}.trk --inverse --cut_invalid
-//     """
-        """
-        touch "${sid}__${centroid.baseName}.trk"
-        """
+    """
+    scil_apply_transform_to_tractogram.py ${centroid} ${anat} ${transfo} ${sid}__${centroid.baseName}.trk --inverse --cut_invalid
+    """
 }
 
 
@@ -153,6 +145,7 @@ tractogram_for_recognition
     .combine(atlas_config)
     .combine(atlas_directory)
     .set{tractogram_and_transformation}
+
 process Recognize_Bundles {
     cpus params.rbx_processes
     memory params.rbx_memory_limit
@@ -164,24 +157,19 @@ process Recognize_Bundles {
     file "results.json"
     file "logfile.txt"
     script:
-//     """
-//     if [ `echo $tractograms | wc -w` -gt 1 ]; then
-//         scil_streamlines_math.py lazy_concatenate $tractograms tracking_concat.trk
-//     else
-//         mv $tractograms tracking_concat.trk
-//     fi
-//     scil_remove_invalid_streamlines.py tracking_concat.trk tractogram_ic.trk --reference ${reference} --remove_single_point --remove_overlapping_points
-//     mkdir tmp/
-//     scil_recognize_multi_bundles.py tractogram_ic.trk ${config} ${directory}/*/ ${transfo} --inverse --out_dir tmp/ \
-//         --log_level DEBUG --multi_parameters $params.multi_parameters --minimal_vote_ratio $params.minimal_vote_ratio \
-//         --tractogram_clustering_thr $params.wb_clustering_thr --seeds $params.seeds --processes $params.rbx_processes
-//     rm tractogram_ic.trk tracking_concat.trk
-//     mv tmp/* ./
-//     """
     """
-    touch "results.json"
-    touch "logfile.txt"
-    touch AF_L.trk AF_R.trk CC_Oc.trk
+    if [ `echo $tractograms | wc -w` -gt 1 ]; then
+        scil_streamlines_math.py lazy_concatenate $tractograms tracking_concat.trk
+    else
+        mv $tractograms tracking_concat.trk
+    fi
+    scil_remove_invalid_streamlines.py tracking_concat.trk tractogram_ic.trk --reference ${reference} --remove_single_point --remove_overlapping_points
+    mkdir tmp/
+    scil_recognize_multi_bundles.py tractogram_ic.trk ${config} ${directory}/*/ ${transfo} --inverse --out_dir tmp/ \
+        --log_level DEBUG --multi_parameters $params.multi_parameters --minimal_vote_ratio $params.minimal_vote_ratio \
+        --tractogram_clustering_thr $params.wb_clustering_thr --seeds $params.seeds --processes $params.rbx_processes
+    rm tractogram_ic.trk tracking_concat.trk
+    mv tmp/* ./
     """
 }
 
@@ -195,44 +183,53 @@ process Clean_Bundles {
     set sid, val(bname), "${sid}__*_cleaned.trk" into bundle_for_eval
     script:
     bname = bundle.name.take(bundle.name.lastIndexOf('.'))
-//     """
-//     scil_outlier_rejection.py ${bundle} "${sid}__${bname}_cleaned.trk" --alpha $params.outlier_alpha
-//     """
     """
-    touch "${sid}__${bname}_cleaned.trk"
+    scil_outlier_rejection.py ${bundle} "${sid}__${bname}_cleaned.trk" --alpha $params.outlier_alpha
     """
 }
 
 ref_bundles
-    .view()
     .transpose()
-    .view()
     // Get bundle name from ref bundles
     // (Remove everything before the first '__' and after the first '.' )
     .map{ it -> [it[0], it[1].name.replaceFirst(/.*__/, "").replaceFirst(/\..*/, ""), it[1]] }
     // Merge with bundle_for_eval using [sid,bname] as key
-    .join(bundle_for_eval, by:[0,1])
-    .view()
-    .set{bundle_and_ref_for_eval}
+    .join(bundle_for_eval, by:[0,1], remainder: true)
+    // Remove any candidate bundles not present in the gold standard
+    .filter { it[2] != null }
+    .into{bundle_and_ref_for_eval; test_channel}
+
 
 process Compute_Measures {
     input:
-    set sid, val(bname), file(ref_bundle), file(candidate_bundle) from bundle_and_ref_for_eval
-
+    set sid, val(bname), file(ref_bundle), val(candidate_bundle) from bundle_and_ref_for_eval
     output:
-    file "${sid}__${bname}__individual_measures.json"
-    file "${sid}__${bname}__pairwise_measures.json"
+    set sid, "${sid}__${bname}_individual_measures.json", "${sid}__${bname}_pairwise_measures.json" into bundle_measures
     script:
+//  If candidate bundle is absent, return empty JSON file.
     """
-    scil_evaluate_bundles_individual_measures.py ${candidate_bundle} ${sid}__${bname}__individual_measures.json
-    compute_pairwise_measures.py ${candidate_bundle} ${ref_bundle} ${sid}__${bname}__pairwise_measures.json
+    if [ "${candidate_bundle}" != "null" ]; then
+        scil_evaluate_bundles_individual_measures.py ${candidate_bundle} ${sid}__${bname}_individual_measures.json
+        evaluate_candidate_bundle.py --in ${candidate_bundle} --gs ${ref_bundle} --out ${sid}__${bname}_pairwise_measures.json
+    else
+        echo "{}" > ${sid}__${bname}_individual_measures.json
+        echo "{}" > ${sid}__${bname}_pairwise_measures.json
+    fi
     """
 }
 
-// process Aggregate_Metrics {
-//     input:
-//
-//     output:
-//
-//     script:
-// }
+bundle_measures
+    .collect {it -> [it[1], it[2]]}
+    .set{all_bundles_measures}
+
+process Aggregate_Measures {
+    publishDir = "results/Aggregate_Measures"
+    input:
+    file(measures) from all_bundles_measures
+    output:
+    file "measures_aggregated.json"
+    script:
+    """
+    aggregate_measures.py --in $measures --out measures_aggregated.json
+    """
+}
