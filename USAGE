@@ -40,19 +40,9 @@ DESCRIPTION
                                             └── dti
                                                 └── S2__fa.nii.gz
 
-    --atlas_config                      Path to json config file
-    --atlas_anat                        Path to reference anatomy of the atlas
-    --atlas_directory                   Path of the folder containing all atlases
+    --atlas                             Path to TractoInferno RBX atlas
 
     OPTIONAL ARGUMENTS (current value)
-
-    --atlas_centroids                       Folder containing centroids (trk) for future tractometry (Must have the same basename as in the atlas_config + '_centroids')
-
-    --multi_parameters                      Number of executions for the multi-parameters ($multi_parameters)
-    --minimal_vote_ratio                    Percentage of the vote to obtain in order to be considered valid ($minimal_vote_ratio)
-    --wb_clustering_thr                     List of distance (mm) for QBx whole brain clustreing ($wb_clustering_thr)
-    --seeds                                 List of random seeds values for the rng ($seeds)
-    --outlier_alpha                         Remove spurious streamlines based on shape ($outlier_alpha)
 
     --register_processes                    Number of processes for registration task ($register_processes).
     --rbx_processes                         Number of processes for bundle recognition task ($rbx_processes).

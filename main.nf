@@ -4,14 +4,7 @@ if(params.help) {
     usage = file("$baseDir/USAGE")
     cpu_count = Runtime.runtime.availableProcessors()
 
-    bindings = ["atlas_config":"$params.atlas_config",
-                "atlas_directory":"$params.atlas_directory",
-                "atlas_centroids":"$params.atlas_centroids",
-                "multi_parameters":"$params.multi_parameters",
-                "minimal_vote_ratio":"$params.minimal_vote_ratio",
-                "wb_clustering_thr":"$params.wb_clustering_thr",
-                "seeds":"$params.seeds",
-                "outlier_alpha":"$params.outlier_alpha",
+    bindings = ["atlas":"$params.atlas",
                 "register_processes":"$params.register_processes",
                 "rbx_processes":"$params.rbx_processes",
                 "cpu_count":"$cpu_count"]
@@ -21,6 +14,18 @@ if(params.help) {
     print template.toString()
     return
 }
+
+// Recobundle segmentation parameters
+multi_parameters=18
+minimal_vote_ratio=0.5
+wb_clustering_thr="15 12"
+seeds="0"
+outlier_alpha=0.5
+
+// Atlas config
+atlas_directory="$params.atlas/rbx-atlas"
+atlas_anat="$params.atlas/mni_masked.nii.gz"
+atlas_config="$params.atlas/config.json"
 
 log.info "SCIL TractoInferno evaluation pipeline"
 log.info "=========================="
@@ -40,17 +45,16 @@ log.info "Options"
 log.info "======="
 log.info ""
 log.info "[Atlas]"
-log.info "Atlas Config: $params.atlas_config"
-log.info "Atlas Anat: $params.atlas_anat"
-log.info "Atlas Directory: $params.atlas_directory"
-log.info "Atlas Centroids: $params.atlas_centroids"
+log.info "Atlas Config: $atlas_config"
+log.info "Atlas Anat: $atlas_anat"
+log.info "Atlas Directory: $atlas_directory"
 log.info ""
 log.info "[Recobundles options]"
-log.info "Multi-Parameters Executions: $params.multi_parameters"
-log.info "Minimal Vote Percentage: $params.minimal_vote_ratio"
-log.info "Whole Brain Clustering Threshold: $params.wb_clustering_thr"
-log.info "Random Seeds: $params.seeds"
-log.info "Outlier Removal Alpha: $params.outlier_alpha"
+log.info "Multi-Parameters Executions: $multi_parameters"
+log.info "Minimal Vote Percentage: $minimal_vote_ratio"
+log.info "Whole Brain Clustering Threshold: $wb_clustering_thr"
+log.info "Random Seeds: $seeds"
+log.info "Outlier Removal Alpha: $outlier_alpha"
 log.info ""
 log.info ""
 
@@ -58,6 +62,7 @@ log.info "Input: $params.input"
 log.info "Reference: $params.reference"
 root = file(params.input)
 ref = file(params.reference)
+
 
 /* Watch out, files are ordered alphabetically in channel */
 tractogram_for_recognition = Channel
@@ -69,29 +74,18 @@ Channel
     .fromPath("$ref/**/*fa.nii.gz",
                     maxDepth:2)
     .map{[it.parent.parent.name, it]}
-    .into{anat_for_registration;anat_for_reference_centroids;anat_for_reference_bundles}
+    .into{anat_for_registration;anat_for_reference_bundles}
 
 ref_bundles = Channel
     .fromFilePairs("$ref/**/{*.trk,}",
                     size:-1,
                     maxDepth:2) {it.parent.parent.name}
 
-if (!(params.atlas_anat) || !(params.atlas_config) || !(params.atlas_directory)) {
-    error "You must specify all 3 atlas related input. --atlas_anat, " +
-    "--atlas_config and --atlas_directory all are mandatory."
-}
-
-Channel.fromPath("$params.atlas_anat")
+Channel.fromPath("$atlas_anat")
     .into{atlas_anat;atlas_anat_for_average}
-atlas_config = Channel.fromPath("$params.atlas_config")
-atlas_directory = Channel.fromPath("$params.atlas_directory")
+atlas_config = Channel.fromPath("$atlas_config")
+atlas_directory = Channel.fromPath("$atlas_directory")
 
-if (params.atlas_centroids) {
-    atlas_centroids = Channel.fromPath("$params.atlas_centroids/*_centroid.trk")
-}
-else {
-    atlas_centroids = Channel.empty()
-}
 
 workflow.onComplete {
     log.info "Pipeline completed at: $workflow.complete"
@@ -110,7 +104,7 @@ process Register_Anat {
     set sid, file(native_anat), file(atlas) from anats_for_registration
 
     output:
-    set sid, "${sid}__output0GenericAffine.mat" into transformation_for_recognition, transformation_for_centroids
+    set sid, "${sid}__output0GenericAffine.mat" into transformation_for_recognition
     set sid, "${sid}__output0GenericAffine.mat" into transformation_for_average
     file "${sid}__outputWarped.nii.gz"
     file "${sid}__native_anat.nii.gz"
@@ -119,22 +113,6 @@ process Register_Anat {
     export ANTS_RANDOM_SEED=1234
     antsRegistrationSyNQuick.sh -d 3 -f ${native_anat} -m ${atlas} -n ${params.register_processes} -o ${sid}__output -t a
     cp ${native_anat} ${sid}__native_anat.nii.gz
-    """
-}
-
-
-anat_for_reference_centroids
-    .join(transformation_for_centroids, by: 0)
-    .set{anat_and_transformation}
-process Transform_Centroids {
-    input:
-    set sid, file(anat), file(transfo) from anat_and_transformation
-    each file(centroid) from atlas_centroids
-    output:
-    file "${sid}__${centroid.baseName}.trk"
-    script:
-    """
-    scil_apply_transform_to_tractogram.py ${centroid} ${anat} ${transfo} ${sid}__${centroid.baseName}.trk --inverse --cut_invalid
     """
 }
 
