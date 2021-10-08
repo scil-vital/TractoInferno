@@ -16,11 +16,11 @@ if(params.help) {
 }
 
 // Hardcoded Recobundle segmentation parameters
-multi_parameters=18
-minimal_vote_ratio=0.5
+multi_parameters="18"
+minimal_vote_ratio="0.5"
 wb_clustering_thr="15 12"
 seeds="0"
-outlier_alpha=0.5
+outlier_alpha="0.5"
 
 // Atlas config
 atlas_directory="$params.atlas/rbx_atlas"
@@ -144,8 +144,8 @@ process Recognize_Bundles {
     scil_remove_invalid_streamlines.py tracking_concat.trk tractogram_ic.trk --reference ${reference} --remove_single_point --remove_overlapping_points
     mkdir tmp/
     scil_recognize_multi_bundles.py tractogram_ic.trk ${config} ${directory}/*/ ${transfo} --inverse --out_dir tmp/ \
-        --log_level DEBUG --multi_parameters $params.multi_parameters --minimal_vote_ratio $params.minimal_vote_ratio \
-        --tractogram_clustering_thr $params.wb_clustering_thr --seeds $params.seeds --processes $params.rbx_processes
+        --log_level DEBUG --multi_parameters $multi_parameters --minimal_vote_ratio $minimal_vote_ratio \
+        --tractogram_clustering_thr $wb_clustering_thr --seeds $seeds --processes $params.rbx_processes
     rm tractogram_ic.trk tracking_concat.trk
     mv tmp/* ./
     """
@@ -162,7 +162,7 @@ process Clean_Bundles {
     script:
     bname = bundle.name.take(bundle.name.lastIndexOf('.'))
     """
-    scil_outlier_rejection.py ${bundle} "${sid}__${bname}_cleaned.trk" --alpha $params.outlier_alpha
+    scil_outlier_rejection.py ${bundle} "${sid}__${bname}_cleaned.trk" --alpha $outlier_alpha
     """
 }
 
