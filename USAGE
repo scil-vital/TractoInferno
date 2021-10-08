@@ -3,12 +3,9 @@ Pipeline for TractoInferno evaluation
 
 USAGE
 
-nextflow run main.nf --input ... --reference ... [OPTIONAL_ARGUMENTS]
-To call with a container add:
-    -with-singularity scilus/scilus:1.2.0_tractoinferno-1.1.0
-    -with-docker scilus/scilus:1.2.0_tractoinferno-1.1.0
+nextflow run main.nf -resume --input ... --reference ... --atlas ... -with-docker scilus/scilpy:1.2.0 [OPTIONAL_ARGUMENTS]
 
-The recommanded atlas is available at https://zenodo.org/record/4630660#.YJvmwXVKhdU
+The atlas used for TractoInferno is available at https://zenodo.org/record/4630660#.YJvmwXVKhdU
 
 DESCRIPTION
 

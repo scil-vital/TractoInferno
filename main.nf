@@ -15,7 +15,7 @@ if(params.help) {
     return
 }
 
-// Recobundle segmentation parameters
+// Hardcoded Recobundle segmentation parameters
 multi_parameters=18
 minimal_vote_ratio=0.5
 wb_clustering_thr="15 12"
@@ -23,7 +23,7 @@ seeds="0"
 outlier_alpha=0.5
 
 // Atlas config
-atlas_directory="$params.atlas/rbx-atlas"
+atlas_directory="$params.atlas/rbx_atlas"
 atlas_anat="$params.atlas/mni_masked.nii.gz"
 atlas_config="$params.atlas/config.json"
 
