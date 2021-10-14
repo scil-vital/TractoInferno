@@ -62,15 +62,23 @@ def main():
         target_dir_path = os.path.join(args.out, dataset, new_id)
 
         for subdir in os.listdir(src_dir_path):
-            target_subdir_path = os.path.join(target_dir_path, subdir)
-            os.makedirs(target_subdir_path, exist_ok=True)
+            # If directory, symlink all files inside
+            if os.path.isdir(os.path.join(src_dir_path, subdir)):
+                target_subdir_path = os.path.join(target_dir_path, subdir)
+                os.makedirs(target_subdir_path, exist_ok=True)
 
-            for src_fname in os.listdir(os.path.join(src_dir_path, subdir)):
-                src_file_path = os.path.join(src_dir_path, subdir, src_fname)
+                for src_fname in os.listdir(os.path.join(src_dir_path, subdir)):
+                    src_file_path = os.path.join(src_dir_path, subdir, src_fname)
 
-                target_fname = src_fname.replace(original_id, new_id)
-                target_file_path = os.path.join(target_subdir_path,
-                                                target_fname)
+                    target_fname = src_fname.replace(original_id, new_id)
+                    target_file_path = os.path.join(target_subdir_path,
+                                                    target_fname)
+                    os.symlink(src_file_path, target_file_path)
+            # If not a directory, symlink files directly
+            else:
+                src_fname = subdir
+                target_file_path = os.path.join(target_dir_path, src_fname)
+                src_file_path = os.path.join(src_dir_path, src_fname)
                 os.symlink(src_file_path, target_file_path)
 
 
