@@ -60,6 +60,7 @@ def main():
         src_dir_path = os.path.realpath(
             os.path.join(args.in_dir, original_id))
         target_dir_path = os.path.join(args.out, dataset, new_id)
+        os.makedirs(target_dir_path, exist_ok=True)
 
         for subdir in os.listdir(src_dir_path):
             # If directory, symlink all files inside
