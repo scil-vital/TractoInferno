@@ -201,7 +201,7 @@ bundle_measures
     .set{all_bundles_measures}
 
 process Aggregate_Measures {
-    publishDir = "results/Aggregate_Measures"
+    publishDir = "$params.output_dir/Aggregate_Measures"
     input:
     file(measures) from all_bundles_measures
     output:
