@@ -186,7 +186,7 @@ branch_result.candidate_found
     .into { bundle_and_ref_for_eval }
 branch_result.candidate_missing
     .map{[it.parent.name, it]}
-    .into { bundle_missing_and_ref_for_eval }
+    .set { bundle_missing_and_ref_for_eval }
 
 
 process Compute_Measures {
