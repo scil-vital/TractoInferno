@@ -175,24 +175,42 @@ ref_bundles
     .join(bundle_for_eval, by:[0,1], remainder: true)
     // Remove any candidate bundles not present in the gold standard
     .filter { it[2] != null }
-    .into{bundle_and_ref_for_eval; test_channel}
+    .branch {
+        candidate_found: it[3] != null
+        candidate_missing: it[3] == null
+    }
+    .into{branch_result}
+
+branch_result.candidate_found
+    .map{[it.parent.name, it]}
+    .into { bundle_and_ref_for_eval }
+branch_result.candidate_missing
+    .map{[it.parent.name, it]}
+    .into { bundle_missing_and_ref_for_eval }
 
 
 process Compute_Measures {
     input:
-    set sid, val(bname), file(ref_bundle), val(candidate_bundle) from bundle_and_ref_for_eval
+    set sid, val(bname), file(ref_bundle), file(candidate_bundle) from bundle_and_ref_for_eval
+    output:
+    set sid, "${sid}__${bname}_individual_measures.json", "${sid}__${bname}_pairwise_measures.json" into bundle_measures
+    script:
+    """
+    scil_evaluate_bundles_individual_measures.py ${candidate_bundle} ${sid}__${bname}_individual_measures.json
+    evaluate_candidate_bundle.py --in ${candidate_bundle} --gs ${ref_bundle} --out ${sid}__${bname}_pairwise_measures.json
+    """
+}
+
+process Compute_Measures_Missing {
+    input:
+    set sid, val(bname), file(ref_bundle), val(candidate_bundle) from bundle_missing_and_ref_for_eval
     output:
     set sid, "${sid}__${bname}_individual_measures.json", "${sid}__${bname}_pairwise_measures.json" into bundle_measures
     script:
 //  If candidate bundle is absent, return empty JSON file.
     """
-    if [ "${candidate_bundle}" != "null" ]; then
-        scil_evaluate_bundles_individual_measures.py ${candidate_bundle} ${sid}__${bname}_individual_measures.json
-        evaluate_candidate_bundle.py --in ${candidate_bundle} --gs ${ref_bundle} --out ${sid}__${bname}_pairwise_measures.json
-    else
-        echo "{}" > ${sid}__${bname}_individual_measures.json
-        echo "{}" > ${sid}__${bname}_pairwise_measures.json
-    fi
+    echo "{}" > ${sid}__${bname}_individual_measures.json
+    echo "{}" > ${sid}__${bname}_pairwise_measures.json
     """
 }
 
