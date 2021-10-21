@@ -184,11 +184,9 @@ ref_bundles
     .set { branch_result }
 
 branch_result.candidate_found
-    .map{[it.parent.name, it]}
     .set { bundle_and_ref_for_eval }
 
 branch_result.candidate_missing
-    .map{[it.parent.name, it]}
     .set { bundle_missing_and_ref_for_eval }
 
 
