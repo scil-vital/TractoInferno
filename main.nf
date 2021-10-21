@@ -177,7 +177,9 @@ ref_bundles
     .filter { it[2] != null }
     .branch {
         candidate_found: it[3] != null
+            return it
         candidate_missing: it[3] == null
+            return it
     }
     .set { branch_result }
 
