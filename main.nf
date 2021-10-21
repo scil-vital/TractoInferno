@@ -194,7 +194,7 @@ process Compute_Measures {
     input:
     set sid, val(bname), file(ref_bundle), file(candidate_bundle) from bundle_and_ref_for_eval
     output:
-    set sid, "${sid}__${bname}_individual_measures.json", "${sid}__${bname}_pairwise_measures.json" into bundle_measures
+    set sid, "${sid}__${bname}_individual_measures.json", "${sid}__${bname}_pairwise_measures.json" into bundle_measures_found
     script:
     """
     scil_evaluate_bundles_individual_measures.py ${candidate_bundle} ${sid}__${bname}_individual_measures.json
@@ -206,7 +206,7 @@ process Compute_Measures_Missing {
     input:
     set sid, val(bname), file(ref_bundle), val(candidate_bundle) from bundle_missing_and_ref_for_eval
     output:
-    set sid, "${sid}__${bname}_individual_measures.json", "${sid}__${bname}_pairwise_measures.json" into bundle_measures
+    set sid, "${sid}__${bname}_individual_measures.json", "${sid}__${bname}_pairwise_measures.json" into bundle_measures_missing
     script:
 //  If candidate bundle is absent, return empty JSON file.
     """
@@ -215,7 +215,8 @@ process Compute_Measures_Missing {
     """
 }
 
-bundle_measures
+bundle_measures_found
+    .mix(bundle_measures_missing)
     .collect {it -> [it[1], it[2]]}
     .set{all_bundles_measures}
 
