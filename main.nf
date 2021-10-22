@@ -158,7 +158,7 @@ process Clean_Bundles {
     input:
     set sid, file(bundle) from all_bundles_for_cleaning
     output:
-    set sid, val(bname), "${sid}__*_cleaned.trk" into bundle_for_eval
+    set sid, val(bname), "${sid}__*_cleaned.trk" optional true into bundle_for_eval
     script:
     bname = bundle.name.take(bundle.name.lastIndexOf('.'))
     """
