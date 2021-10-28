@@ -131,7 +131,7 @@ process Recognize_Bundles {
     input:
     set sid, file(tractograms), file(reference), file(transfo), file(config), file(directory) from tractogram_and_transformation
     output:
-    set sid, "*.trk" into bundles_for_cleaning
+    set sid, "*.trk" optional true into bundles_for_cleaning
     file "results.json"
     file "logfile.txt"
     script:
