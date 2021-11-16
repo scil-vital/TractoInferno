@@ -7,6 +7,13 @@ import os
 
 import numpy as np
 
+TRACTOINFERNO_BUNDLES = ["AF_L", "AF_R", "CC_Fr_1", "CC_Fr_2", "CC_Oc", "CC_Pa",
+                         "CC_Pr_Po", "CG_L", "CG_R", "FAT_L", "FAT_R", "FPT_L",
+                         "FPT_R", "IFOF_L", "IFOF_R", "ILF_L", "ILF_R", "MCP",
+                         "MdLF_L", "MdLF_R", "OR_ML_L", "OR_ML_R", "POPT_L",
+                         "POPT_R", "PYT_L", "PYT_R", "SLF_L", "SLF_R", "UF_L",
+                         "UF_R"]
+
 
 def _build_arg_parser():
     p = argparse.ArgumentParser(
@@ -52,6 +59,10 @@ def main():
         # Extract bundle name
         bname = remaining.replace("_individual_measures.json", "").replace(
             "_pairwise_measures.json", "")
+
+        # Skip if bundle is not in TractoInferno official bundles
+        if bname not in TRACTOINFERNO_BUNDLES:
+            continue
 
         if subid not in subject_dict:
             subject_dict[subid] = {}
