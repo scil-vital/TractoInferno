@@ -48,12 +48,16 @@ def main():
     subject_dict = results["subjects"]
     for measure_file in args.in_measures:
         subid, remaining = measure_file.split("__", 1)
-        bname = remaining.split("_")[0]
+
+        # Extract bundle name
+        bname = remaining.replace("_individual_measures.json", "").replace(
+            "_pairwise_measures.json", "")
 
         if subid not in subject_dict:
             subject_dict[subid] = {}
         sub_results = subject_dict[subid]
         if bname not in subject_dict[subid]:
+            # Set default values when no bundle has been reconstruction
             sub_results[bname] = {
                 "dice": 0.,
                 "overlap": 0.,
