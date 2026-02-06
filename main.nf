@@ -96,7 +96,7 @@ workflow.onComplete {
 anat_for_registration
     .combine(atlas_anat)
     .set{anats_for_registration}
-process Register_Anat {
+process Register_Anat_to_Atlas {
     cpus params.register_processes
     memory '2 GB'
 
