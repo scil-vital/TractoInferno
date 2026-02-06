@@ -23,7 +23,7 @@ seeds="0"
 outlier_alpha="0.5"
 
 // Atlas config
-atlas_directory="$params.atlas/rbx_atlas"
+atlas_directory="$params.atlas/"
 atlas_anat="$params.atlas/mni_masked.nii.gz"
 atlas_config="$params.atlas/config.json"
 
@@ -47,7 +47,7 @@ log.info ""
 log.info "[Atlas]"
 log.info "Atlas Config: $atlas_config"
 log.info "Atlas Anat: $atlas_anat"
-log.info "Atlas Directory: $atlas_directory"
+log.info "Atlas Bundles: $atlas_directory/atlas"
 log.info ""
 log.info "[Recobundles options]"
 log.info "Multi-Parameters Executions: $multi_parameters"
@@ -56,13 +56,41 @@ log.info "Whole Brain Clustering Threshold: $wb_clustering_thr"
 log.info "Random Seeds: $seeds"
 log.info "Outlier Removal Alpha: $outlier_alpha"
 log.info ""
+log.info "Input folder: $params.input"
+log.info "Reference folder: $params.reference"
+log.info "Results with be saved in: $params.output_dir"
 log.info ""
-
-log.info "Input: $params.input"
-log.info "Reference: $params.reference"
 root = file(params.input)
 ref = file(params.reference)
 
+// List all reference subjects (folders)
+def subjects = ref.listFiles()?.findAll { it.isDirectory() }?.collect { it.name }
+log.info "Found reference subjects: $subjects"
+
+// Verify inputs
+subjects.each { subj ->
+    def subjFiles = file("$ref/${subj}/**/*fa.nii.gz")
+    if (subjFiles.isEmpty()) {
+        error "No */*fa.nii.gz file found for reference subject $subj in $ref"
+    }
+
+    def subjFiles2 = file("$ref/**/{*.trk,}")
+    if (subjFiles2.isEmpty()) {
+        error "Reference bundles not found for reference subject $subj in $ref"
+    }
+}
+
+// List all processing subjects (folders)
+def subjects2 = root.listFiles()?.findAll { it.isDirectory() }?.collect { it.name }
+log.info "Found processing subjects: $subjects"
+
+// Verify inputs
+subjects2.each { subj ->
+    def subjFiles3 = file("$root/**/{*.*,}")
+    if (subjFiles3.isEmpty()) {
+        error "No tractogram found for reference subject $subj in $root"
+    }
+}
 
 /* Watch out, files are ordered alphabetically in channel */
 tractogram_for_recognition = Channel
@@ -108,6 +136,7 @@ process Register_Anat_to_Atlas {
     set sid, "${sid}__output0GenericAffine.mat" into transformation_for_average
     file "${sid}__outputWarped.nii.gz"
     file "${sid}__native_anat.nii.gz"
+
     script:
     """
     export ANTS_RANDOM_SEED=1234
@@ -115,7 +144,6 @@ process Register_Anat_to_Atlas {
     cp ${native_anat} ${sid}__native_anat.nii.gz
     """
 }
-
 
 tractogram_for_recognition
     .join(anat_for_reference_bundles)
@@ -130,10 +158,12 @@ process Recognize_Bundles {
 
     input:
     set sid, file(tractograms), file(reference), file(transfo), file(config), file(directory) from tractogram_and_transformation
+
     output:
     set sid, "*.trk" optional true into bundles_for_cleaning
     file "results.json"
     file "logfile.txt"
+
     script:
     """
     if [ `echo $tractograms | wc -w` -gt 1 ]; then
@@ -143,7 +173,7 @@ process Recognize_Bundles {
     fi
     scil_remove_invalid_streamlines.py tracking_concat.trk tractogram_ic.trk --reference ${reference} --remove_single_point --remove_overlapping_points
     mkdir tmp/
-    scil_recognize_multi_bundles.py tractogram_ic.trk ${config} ${directory}/*/ ${transfo} --inverse --out_dir tmp/ \
+    scil_recognize_multi_bundles.py tractogram_ic.trk ${config} ${directory}/atlas/*/ ${transfo} --inverse --out_dir tmp/ \
         --log_level DEBUG --multi_parameters $multi_parameters --minimal_vote_ratio $minimal_vote_ratio \
         --tractogram_clustering_thr $wb_clustering_thr --seeds $seeds --processes $params.rbx_processes
     rm tractogram_ic.trk tracking_concat.trk
@@ -155,6 +185,7 @@ bundles_for_cleaning
     .transpose()
     .set{all_bundles_for_cleaning}
 process Clean_Bundles {
+
     input:
     set sid, file(bundle) from all_bundles_for_cleaning
     output:
@@ -191,6 +222,7 @@ branch_result.candidate_missing
 
 
 process Compute_Measures {
+
     input:
     set sid, val(bname), file(ref_bundle), file(candidate_bundle) from bundle_and_ref_for_eval
     output:
@@ -208,7 +240,7 @@ process Compute_Measures_Missing {
     output:
     set sid, "${sid}__${bname}_individual_measures.json", "${sid}__${bname}_pairwise_measures.json" into bundle_measures_missing
     script:
-//  If candidate bundle is absent, return empty JSON file.
+    //  If candidate bundle is absent, return empty JSON file.
     """
     echo "{}" > ${sid}__${bname}_individual_measures.json
     echo "{}" > ${sid}__${bname}_pairwise_measures.json
@@ -221,6 +253,7 @@ bundle_measures_found
     .set{all_bundles_measures}
 
 process Aggregate_Measures {
+    // Output is not in the output/subject/ folder.
     publishDir = "$params.output_dir/Aggregate_Measures"
     input:
     file(measures) from all_bundles_measures

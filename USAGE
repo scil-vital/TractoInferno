@@ -37,7 +37,13 @@ DESCRIPTION
                                             └── dti
                                                 └── S2__fa.nii.gz
 
-    --atlas                             Path to TractoInferno RBX atlas
+    --atlas                             Path to TractoInferno RBX atlas such as downloaded from Zenoto. Should contain:
+
+                                        [root]
+                                        ├── atlas
+                                        ├── centroids
+                                        ├── config.json
+                                        └── mni_masked.nii.gz
 
     OPTIONAL ARGUMENTS (current value)
 
@@ -47,7 +53,7 @@ DESCRIPTION
                                             Only affects the local scheduler.
 
     --output_dir                            Directory where to write the final results.
-                                            By default, will be in "./results_rbx"
+                                            By default, will be in "./results"
 
 
 AVAILABLE PROFILES (using -profile option (e.g. -profile large_dataset,cbrain))
