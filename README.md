@@ -85,11 +85,11 @@ Usage
 
 See [usage](https://github.com/scil-vital/TractoInferno/blob/main/USAGE) or run `nextflow run main.nf --help`.
 
+Output
+------
 
-If you wish, you may then use our python utilitary to convert the json output to a .csv file. Using any environment with python 3:
+The output will contain folders Aggregate_Measures and one folder per subject.  The Aggregate_Measures present the statistics for all subjects.
 
-```
-python convert_aggregate_json_to_csv.py \
-    output/Aggregate_Measures/measures_aggregated.json \
-    out_file.csv
-```
+Reminder: there is a total of 39 bundles in the atlas. Bundles available as --reference for each subject are the recovered bundles that passed visual QC.  Missing bundles were either not reconstructed in Tractoinferno processing, or not of enough quality to be kept. If you did recover them in your own tractogram, they will not participate in the scoring.
+
+To view all bundles recovered by RBX for your tractogram, even those that were not included in the scoring, view outputs SubjX/Clean_Bundles/*.trk.

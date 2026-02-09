@@ -17,7 +17,8 @@ DESCRIPTION
                                         └── S2
                                             └── *.trk
 
-    --reference=/path/to/[root]         Root folder containing multiple subjects and candidate tractograms
+    --reference=/path/to/[root]         Root folder containing multiple subjects and candidate tractograms.
+                                        Data can be downloaded here: https://openneuro.org/datasets/ds003900/versions/1.1.1
 
                                         [root]
                                         ├── S1
@@ -37,7 +38,9 @@ DESCRIPTION
                                             └── dti
                                                 └── S2__fa.nii.gz
 
-    --atlas                             Path to TractoInferno RBX atlas such as downloaded from Zenoto. Should contain:
+    --atlas                             Path to TractoInferno RBX atlas such as downloaded from Zenoto at
+                                        https://zenodo.org/record/4630660#.YJvmwXVKhdU
+                                        Should contain:
 
                                         [root]
                                         ├── atlas
@@ -61,6 +64,7 @@ AVAILABLE PROFILES (using -profile option (e.g. -profile large_dataset,cbrain))
 large_dataset                               When this profile is used, rbx_flow will be asking for 16 GB instead of 8 GB.
 
 fully_reproducible                          When this profile is used, all the parameters will be set to have 100% reproducible results.
+                                            Fixes the number of processes to 1, so the full process could be longer to run.
 
 macos                                       When this profile is used, rbx_flow will modify a parameter (scratch) for MacOS users.
 

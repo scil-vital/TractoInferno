@@ -259,8 +259,11 @@ process Aggregate_Measures {
     file(measures) from all_bundles_measures
     output:
     file "measures_aggregated.json"
+    file "measures_aggregated_per_bundle.csv"
+    file "measures_aggregated_overall.csv"
     script:
     """
     aggregate_measures.py --in $measures --out measures_aggregated.json
+    convert_aggregate_json_to_csv.py measures_aggregated.json measures_aggregated_per_bundle.csv measures_aggregated_overall.csv
     """
 }
