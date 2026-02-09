@@ -85,3 +85,11 @@ Usage
 
 See [usage](https://github.com/scil-vital/TractoInferno/blob/main/USAGE) or run `nextflow run main.nf --help`.
 
+
+If you wish, you may then use our python utilitary to convert the json output to a .csv file. Using any environment with python 3:
+
+```
+python convert_aggregate_json_to_csv.py \
+    output/Aggregate_Measures/measures_aggregated.json \
+    out_file.csv
+```
