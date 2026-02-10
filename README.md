@@ -58,17 +58,17 @@ We recommend using the command in an environment already prepared by us, where a
 
 **Singularity**
 
-If you are on Linux, we recommand using Singularity (which is now renamed Apptainer). First, you need to install version 3.*.:
+If you are on Linux, we recommand using Singularity (which is now renamed Apptainer).
 
-- [Singularity](https://apptainer.org/user-docs/3.0/installation.html)
+- [Singularity](https://apptainer.org/docs/admin/main/installation.html)
 
 Then you may use singularity to build the environment into an image (.sif):
 
-`singularity build scilus_1.2.0.sif docker://scilus/scilus:1.2.0`
+`apptainer build scilus_1.2.0.sif docker://scilus/scilus:1.2.0`
 
 Then you can run our code through Nextlow with your favorite options (see the file [usage](https://github.com/scil-vital/TractoInferno/blob/main/USAGE)) and add this in the command line:
 
-`-with-singularity scilus/scilus:1.2.0`
+`-with-singularity scilus_1.2.0.sif`
 
 **Docker**
 
@@ -84,6 +84,12 @@ Usage
 -----
 
 See [usage](https://github.com/scil-vital/TractoInferno/blob/main/USAGE) or run `nextflow run main.nf --help`.
+
+Hints:
+
+- It is common usage to run the command line directly from the output folder. The work folder created by Nextflow will be created in the directory from where you lauch the command line.
+
+- The final output will contain symlinks to files inside the work folder. To create a folder with direct files, you may use: `rsync -rvL $output_dir_links $output_dir_files`
 
 Output
 ------
