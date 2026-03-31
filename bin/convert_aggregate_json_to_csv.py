@@ -114,15 +114,28 @@ def _write_to_csv_bundles(f, results, subjects):
                     # Prepare metrics for CSV in order
                     bundle_metrics = []
                     for metric in METRICS:
-                        bundle_metrics.append(results[subj][bundle][metric])
+                        try:
+                            bundle_metrics.append(results[subj][bundle][metric])
+                        except KeyError:
+                            print("aggregate_measures.json does not follow expected pattern.\n"
+                                  "Tried to get results[{}][{}][{}], but {} does not exist.\n"
+                                  "Possible values: {}"
+                                  .format(subj, bundle, metric, metric,
+                                          list(results[subj][bundle].keys())))
+                            bundle_metrics.append(np.nan)
                 else:
                     bundle_metrics = ['--'] * len(METRICS)
                 writer.writerow([subj, bundle] + bundle_metrics)
             print("Subject {}: Found {} valid bundles out of "
                   "{} reference bundle.".format(subj, nb_found, nb_ref))
-            overall_stats[subj] = [nb_ref, nb_found, np.mean(dices),
-                                   np.mean(overlaps), np.mean(overreachs),
-                                   np.sum(nb_streamlines)]
+            if nb_found > 0:
+                overall_stats[subj] = [nb_ref, nb_found, np.nanmean(dices),
+                                       np.nanmean(overlaps),
+                                       np.nanmean(overreachs),
+                                       np.nansum(nb_streamlines)]
+            else:
+                overall_stats[subj] = [nb_ref, nb_found, 0, 0, 0, 0]
+
 
     return overall_stats
 
